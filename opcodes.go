@@ -32,6 +32,15 @@ var OpCodes_Table = map[string]OpCodeInfo{
 	"OR": OpCodeInfo{[]int{1}},
 	"CP": OpCodeInfo{[]int{1}},
 
+	"RLC": OpCodeInfo{[]int{1}},
+	"RRC": OpCodeInfo{[]int{1}},
+	"RL": OpCodeInfo{[]int{1}},
+	"RR": OpCodeInfo{[]int{1}},
+	"SLA": OpCodeInfo{[]int{1}},
+	"SRA": OpCodeInfo{[]int{1}},
+	"SWAP": OpCodeInfo{[]int{1}},
+	"SRL": OpCodeInfo{[]int{1}},
+
 	"BIT": OpCodeInfo{[]int{2}},
 	"CALL": OpCodeInfo{[]int{1, 2}},
 	"JP": OpCodeInfo{[]int{1, 2}},
@@ -93,6 +102,17 @@ var OpCodes_Table_ALU = map[string]int {
 	"CP": 7,
 }
 
+var OpCodes_Table_ROT = map[string]int {
+	"RLC": 0,
+	"RRC": 1,
+	"RL": 2,
+	"RR": 3,
+	"SLA": 4,
+	"SRA": 5,
+	"SWAP": 6,
+	"SRL": 7,
+}
+
 func OpCodes_GetOperandAsNumber(instruction Instruction, i int, fileBase string, lineNumber int) int {
 	num, ok := Assembler_ParseNumber(instruction.Operands[i])
 	if !ok {
@@ -107,10 +127,12 @@ func OpCodes_GetOperandAsByte(instruction Instruction, i int, fileBase string, l
 	return byte(num)
 }
 
-func OpCodes_GetOperandAsRegister8(instruction Instruction, i int, fileBase string, lineNumber int) string {
+func OpCodes_GetOperandAsRegister8(instruction Instruction, i int, canBeIndirectHL bool, fileBase string, lineNumber int) string {
 	foundType := OpCodes_GetOperandType(instruction, i, false)
 	if foundType != OperandRegister8 {
-		log.Fatalf("Expected register, got '%s' at %s:%d", instruction.Operands[i], fileBase, lineNumber)
+		if !canBeIndirectHL || instruction.Operands[i] != "[HL]" {
+			log.Fatalf("Expected register, got '%s' at %s:%d", instruction.Operands[i], fileBase, lineNumber)
+		}
 	}
 	return instruction.Operands[i]
 }
@@ -203,9 +225,28 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 			log.Fatalf("Invalid operand '%s' for %s at %s:%d", instruction.Operands[targetIndex], instruction.Mnemonic, fileBase, lineNumber)
 		}
 
+	case "RLC":
+		fallthrough
+	case "RRC":
+		fallthrough
+	case "RL":
+		fallthrough
+	case "RR":
+		fallthrough
+	case "SLA":
+		fallthrough
+	case "SRA":
+		fallthrough
+	case "SWAP":
+		fallthrough
+	case "SRL":
+		yVal := OpCodes_Table_ROT[instruction.Mnemonic]
+		targetVal := OpCodes_Table_R[OpCodes_GetOperandAsRegister8(instruction, 0, true, fileBase, lineNumber)]
+		return []byte{0xCB, OpCodes_AsmXZY(0, targetVal, yVal)}
+
 	case "BIT":
 		target := OpCodes_GetOperandAsNumber(instruction, 0, fileBase, lineNumber)
-		register := OpCodes_GetOperandAsRegister8(instruction, 1, fileBase, lineNumber)
+		register := OpCodes_GetOperandAsRegister8(instruction, 1, true, fileBase, lineNumber)
 		return []byte{0xCB, OpCodes_AsmXZY(1, OpCodes_Table_R[register], target)}
 
 	case "CALL":

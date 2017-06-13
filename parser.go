@@ -18,12 +18,13 @@ var Parser_8BitRegisterNames = []string{
 }
 
 var Parser_16BitRegisterNames = []string{
+	"AF",
 	"BC",
-	"(BC)",
+	"[BC]",
 	"DE",
-	"(DE)",
+	"[DE]",
 	"HL",
-	"(HL)",
+	"[HL]",
 	"PC",
 	"SP",
 }
@@ -54,10 +55,17 @@ var Parser_Tokens = map[string]int{
 func Parser_ParseExpressionTokens(expression string) []string {
 	tokens := []string{}
 	buf := ""
+	inAString := false
 
 	for i := 0; i < len(expression); i++ {
 		char := expression[i]
-		if ((char == '(' || char == ')') ||
+		if (char == '"' || char == '\'') {
+			buf = buf + string(char)
+			inAString = !inAString
+		} else if inAString {
+			buf = buf + string(char)
+		} else if (
+			(char == '(' || char == ')') ||
 			(char == '+' || char == '-' || char == '*' || char == '/') ||
 			(char == '&' || char == '|' || char == '^') ||
 			(char == '>' || char == '<')) {
@@ -102,6 +110,13 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		return expression
 	}
 
+	isIndirectAccess := false
+	if expression[0] == '[' && expression[len(expression) - 1] == ']' {
+		// remove the brackets for now, add them back at the end
+		isIndirectAccess = true
+		expression = expression[1:len(expression) - 1]
+	}
+
 	tokens := Parser_ParseExpressionTokens(expression)
 
 	// https://en.wikipedia.org/wiki/Shunting-yard_algorithm
@@ -136,7 +151,7 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 				outputStack = append(outputStack, poppedToken) 
 			}
 			if len(operatorStack) == 0 {
-				log.Fatal("Extra ')' at %s:%d", fileBase, lineNumber)
+				log.Fatalf("Extra ')' at %s:%d", fileBase, lineNumber)
 			}
 			// remove the left parenthesis
 			operatorStack = operatorStack[:len(operatorStack)-1]
@@ -152,7 +167,7 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 	for len(operatorStack) > 0 {
 		poppedToken, operatorStack = operatorStack[len(operatorStack)-1], operatorStack[:len(operatorStack)-1]
 		if poppedToken == "(" || poppedToken == ")" {
-			log.Fatal("Extra '%s' at %s:%d", poppedToken, fileBase, lineNumber)
+			log.Fatalf("Extra '%s' at %s:%d", poppedToken, fileBase, lineNumber)
 		}
 		outputStack = append(outputStack, poppedToken) 
 	}
@@ -197,5 +212,10 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		log.Fatalf("Missing operands for expression '%s' at %s:%d", expression, fileBase, lineNumber)
 	}
 
-	return strconv.Itoa(rpnStack[0])
+	result := strconv.Itoa(rpnStack[0])
+	if isIndirectAccess {
+		result = "[" + result + "]"
+	}
+
+	return result
 }

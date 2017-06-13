@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 )
 
 const KiB = 1024
@@ -21,5 +22,8 @@ func main() {
 
 	ROM_Create(workingDirectory)
 
-	log.Println(CurrentROM.Definitions)
+	log.Println("Constant listing:")
+	for name, val := range CurrentROM.Definitions {
+		log.Println("*", name, val, "0x" + strconv.FormatInt(int64(val), 16))
+	}
 }

@@ -24,6 +24,10 @@ func Assembler_ParseNumber(numString string) (int, bool) {
 		}
 		return int(num), true
 	}
+	if len(numString) == 3 && numString[0] == '\'' && numString[2] == '\'' {
+		// it's a character
+		return int(numString[1]), true
+	}
 	num, err := strconv.ParseInt(numString, 0, 0)
 	if err != nil {
 		return 0, false
@@ -31,14 +35,14 @@ func Assembler_ParseNumber(numString string) (int, bool) {
 	return int(num), true
 }
 
-func Assembler_ParseFile(filePath string, origin int, maxLength int) {
+func Assembler_ParseFile(filePath string, origin int, maxLength int) int {
 	fileBase := path.Base(filePath)
 
 	log.Printf("Parsing file %s...\n", fileBase)
 
 	Assembler_FindLabelsInFile(filePath, fileBase)
 	Assembler_ParseFilePass(filePath, fileBase, origin, maxLength, 0) // first pass just finds what labels are pointing to
-	Assembler_ParseFilePass(filePath, fileBase, origin, maxLength, 1)
+	return Assembler_ParseFilePass(filePath, fileBase, origin, maxLength, 1)
 }
 
 func Assembler_FindLabelsInFile(filePath string, fileBase string) {
@@ -65,7 +69,7 @@ func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 	}
 }
 
-func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLength int, pass int) {
+func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLength int, pass int) int {
 	file, err := os.Open(filePath)
 	if err != nil { panic(err) }
 	defer file.Close()
@@ -111,6 +115,10 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 				if !valid { log.Fatalf("Expected number, got '%s' at %s:%d", instructionParts[1], fileBase, lineNumber) }
 				outputIndex = newOrigin
 
+			case "incasm":
+				includedFilePath := path.Join(path.Dir(filePath), strings.Replace(instructionParts[1], "\"", "", -1))
+				outputIndex = Assembler_ParseFilePass(includedFilePath, path.Base(includedFilePath), outputIndex, maxLength, pass)
+
 			default:
 				log.Fatalf("Unknown special instruction '%s' at %s:%d", instructionParts[0][1:], fileBase, lineNumber)
 			}
@@ -139,8 +147,8 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 
 				for i := 0; i < len(line); i++ {
 					char := line[i]
-					if char == '/' && (len(line) - i) > 1 {
-						if line[i + 1] == '/' {
+					if (char == '/' && (len(line) - i) > 1) || char == ';' || char == '#' {
+						if char == ';' || char == '#' || line[i + 1] == '/' {
 							// single-line comment
 							break
 						} else if line[i + 1] == '*' {
@@ -196,6 +204,8 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 	if err = scanner.Err(); err != nil {
 		panic(err)
 	}
+
+	return outputIndex
 }
 
 func Assembler_AssembleInstruction(instruction Instruction, outputIndex int, fileBase string, lineNumber int) int {

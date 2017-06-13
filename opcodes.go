@@ -21,7 +21,16 @@ type OpCodeInfo struct {
 }
 
 var OpCodes_Table = map[string]OpCodeInfo{
-	"DB": OpCodeInfo{[]int{1}},
+	"DB": OpCodeInfo{[]int{-1}},
+
+	"ADD": OpCodeInfo{[]int{2}},
+	"ADC": OpCodeInfo{[]int{2}},
+	"SUB": OpCodeInfo{[]int{1}},
+	"SBC": OpCodeInfo{[]int{2}},
+	"AND": OpCodeInfo{[]int{1}},
+	"XOR": OpCodeInfo{[]int{1}},
+	"OR": OpCodeInfo{[]int{1}},
+	"CP": OpCodeInfo{[]int{1}},
 
 	"BIT": OpCodeInfo{[]int{2}},
 	"CALL": OpCodeInfo{[]int{1, 2}},
@@ -29,7 +38,11 @@ var OpCodes_Table = map[string]OpCodeInfo{
 	"DEC": OpCodeInfo{[]int{1}},
 	"INC": OpCodeInfo{[]int{1}},
 	"LD": OpCodeInfo{[]int{2}},
+	"LDH": OpCodeInfo{[]int{2}},
+	"LDI": OpCodeInfo{[]int{2}},
 	"NOP": OpCodeInfo{[]int{0}},
+	"POP": OpCodeInfo{[]int{1}},
+	"PUSH": OpCodeInfo{[]int{1}},
 	"RET": OpCodeInfo{[]int{0, 1}},
 }
 
@@ -40,7 +53,7 @@ var OpCodes_Table_R = map[string]int {
 	"E": 3,
 	"H": 4,
 	"L": 5,
-	"(HL)": 6,
+	"[HL]": 6,
 	"A": 7,
 }
 
@@ -69,6 +82,17 @@ var OpCodes_Table_CC = map[string]int {
 	"M": 7,
 }
 
+var OpCodes_Table_ALU = map[string]int {
+	"ADD": 0,
+	"ADC": 1,
+	"SUB": 2,
+	"SBC": 3,
+	"AND": 4,
+	"XOR": 5,
+	"OR": 6,
+	"CP": 7,
+}
+
 func OpCodes_GetOperandAsNumber(instruction Instruction, i int, fileBase string, lineNumber int) int {
 	num, ok := Assembler_ParseNumber(instruction.Operands[i])
 	if !ok {
@@ -79,12 +103,9 @@ func OpCodes_GetOperandAsNumber(instruction Instruction, i int, fileBase string,
 
 func OpCodes_GetOperandAsByte(instruction Instruction, i int, fileBase string, lineNumber int) byte {
 	num := OpCodes_GetOperandAsNumber(instruction, i, fileBase, lineNumber)
-	if num < 0 || num > 255 {
-		log.Fatalf("Byte value %d out of range at %s:%d", num, fileBase, lineNumber)
-	}
+	OpCodes_EnsureNumberIsByte(num, fileBase, lineNumber)
 	return byte(num)
 }
-
 
 func OpCodes_GetOperandAsRegister8(instruction Instruction, i int, fileBase string, lineNumber int) string {
 	foundType := OpCodes_GetOperandType(instruction, i, false)
@@ -93,7 +114,6 @@ func OpCodes_GetOperandAsRegister8(instruction Instruction, i int, fileBase stri
 	}
 	return instruction.Operands[i]
 }
-
 
 func OpCodes_GetOperandType(instruction Instruction, i int, canBeConditionCode bool) OperandType {
 	operand := instruction.Operands[i]
@@ -104,10 +124,16 @@ func OpCodes_GetOperandType(instruction Instruction, i int, canBeConditionCode b
 	} else if Utils_StringInSlice(operand, Parser_16BitRegisterNames) {
 		return OperandRegister16
 	} else {
-		if strings.Contains(operand, "(") {
+		if strings.Contains(operand, "[") {
 			return OperandValueIndirect
 		}
 		return OperandValue
+	}
+}
+
+func OpCodes_EnsureNumberIsByte(num int, fileBase string, lineNumber int) {
+	if num < 0 || num > 255 {
+		log.Fatalf("Byte value %d out of range at %s:%d", num, fileBase, lineNumber)
 	}
 }
 
@@ -126,7 +152,7 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		log.Fatalf("Unknown instruction '%s' at %s:%d", instruction.Mnemonic, fileBase, lineNumber)
 	}
 
-	if !Utils_IntInSlice(len(instruction.Operands), info.ValidOperandCounts) {
+	if info.ValidOperandCounts[0] != -1 && !Utils_IntInSlice(len(instruction.Operands), info.ValidOperandCounts) {
 		log.Fatalf("Incorrect number of operands for instruction '%s' (got %d) at %s:%d", instruction.Mnemonic, len(instruction.Operands), fileBase, lineNumber)
 	}
 
@@ -135,7 +161,47 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 	switch instruction.Mnemonic {
 	case "DB":
 		// ok i guess technically it's not really an instruction but too bad
-		return []byte{OpCodes_GetOperandAsByte(instruction, 0, fileBase, lineNumber)}
+		output := []byte{}
+		for i := 0; i < len(instruction.Operands); i++ {
+			output = append(output, OpCodes_GetOperandAsByte(instruction, i, fileBase, lineNumber))
+		}
+		return output
+
+
+	case "ADD":
+		fallthrough
+	case "ADC":
+		fallthrough
+	case "SUB":
+		fallthrough
+	case "SBC":
+		fallthrough
+	case "AND":
+		fallthrough
+	case "XOR":
+		fallthrough
+	case "OR":
+		fallthrough
+	case "CP":
+		if len(instruction.Operands) == 2 {
+			if instruction.Operands[0] != "A" {
+				log.Fatalf("Invalid operand '%s' for %s at %s:%d", instruction.Operands[0], instruction.Mnemonic, fileBase, lineNumber)
+			}
+		}
+
+		targetIndex := len(instruction.Operands) - 1
+
+		yVal := OpCodes_Table_ALU[instruction.Mnemonic]
+		targetType := OpCodes_GetOperandType(instruction, targetIndex, false)
+		if targetType == OperandValue {
+			targetVal := OpCodes_GetOperandAsByte(instruction, targetIndex, fileBase, lineNumber)
+			return []byte{OpCodes_AsmXZY(3, 6, yVal), targetVal}
+		} else if (targetType == OperandRegister8 || instruction.Operands[targetIndex] == "[HL]") {
+			targetVal := OpCodes_Table_R[instruction.Operands[targetIndex]]
+			return []byte{OpCodes_AsmXZY(2, targetVal, yVal)}
+		} else {
+			log.Fatalf("Invalid operand '%s' for %s at %s:%d", instruction.Operands[targetIndex], instruction.Mnemonic, fileBase, lineNumber)
+		}
 
 	case "BIT":
 		target := OpCodes_GetOperandAsNumber(instruction, 0, fileBase, lineNumber)
@@ -156,7 +222,7 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 					firstByte = OpCodes_AsmXZQP(3, 5, 1, 0)
 				}
 				return []byte{firstByte, byte(target & 0xFF), byte(target >> 8)}
-			} else if instruction.Mnemonic == "JP" && (instruction.Operands[0] == "HL" || instruction.Operands[0] == "(HL)") {
+			} else if instruction.Mnemonic == "JP" && (instruction.Operands[0] == "HL" || instruction.Operands[0] == "[HL]") {
 				return []byte{OpCodes_AsmXZQP(3, 1, 1, 2)}
 			} else {
 				log.Fatalf("Invalid operand '%s' for %s at %s:%d", instruction.Operands[0], instruction.Mnemonic, fileBase, lineNumber)
@@ -179,7 +245,7 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 	case "INC":
 		isINC := (instruction.Mnemonic == "INC")
 		targetType := OpCodes_GetOperandType(instruction, 0, false)
-		if targetType == OperandRegister8 {
+		if (targetType == OperandRegister8 || instruction.Operands[0] == "[HL]") {
 			targetVal := OpCodes_Table_R[instruction.Operands[0]]
 			if isINC {
 				return []byte{OpCodes_AsmXZY(0, 4, targetVal)}
@@ -208,7 +274,7 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		} else if dstType == OperandRegister16 {
 			dstVal = OpCodes_Table_RP[instruction.Operands[0]]
 		} else {
-			dstVal, err = strconv.Atoi(strings.Replace(strings.Replace(instruction.Operands[0], "(", "", 1), ")", "", 1))
+			dstVal, err = strconv.Atoi(strings.Replace(strings.Replace(instruction.Operands[0], "[", "", -1), "]", "", -1))
 			if err != nil { panic(err) }
 		}
 
@@ -217,43 +283,103 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		} else if srcType == OperandRegister16 {
 			srcVal = OpCodes_Table_RP[instruction.Operands[1]]
 		} else {
-			srcVal, err = strconv.Atoi(strings.Replace(strings.Replace(instruction.Operands[1], "(", "", 1), ")", "", 1))
+			srcVal, err = strconv.Atoi(strings.Replace(strings.Replace(instruction.Operands[1], "[", "", -1), "]", "", -1))
 			if err != nil { panic(err) }
 		}
 
+		if (dstType == OperandRegister8 || instruction.Operands[0] == "[HL]") && srcType == OperandValue {
+			if instruction.Operands[0] == "[HL]" {
+				dstVal = OpCodes_Table_R["[HL]"]
+			}
+			OpCodes_EnsureNumberIsByte(srcVal, fileBase, lineNumber)
+			return []byte{byte((dstVal << 3) | 6), byte(srcVal & 0xFF)}
+		}
+		if (dstType == OperandRegister8 || instruction.Operands[0] == "[HL]") && (srcType == OperandRegister8 || instruction.Operands[1] == "[HL]") {
+			if instruction.Operands[0] == "[HL]" {
+				dstVal = OpCodes_Table_R["[HL]"]
+			}
+			if instruction.Operands[1] == "[HL]" {
+				srcVal = OpCodes_Table_R["[HL]"]
+			}
+			return []byte{byte(64 | (dstVal << 3) | srcVal)}
+		}
 		if dstType == OperandRegister16 && srcType == OperandValue {
 			return []byte{byte((dstVal << 4) | 1), byte(srcVal & 0xFF), byte(srcVal >> 8)}
 		}
-		if dstType == OperandRegister8 && srcType == OperandValue {
-			return []byte{byte((dstVal << 3) | 6), byte(srcVal & 0xFF)}
-		}
-		if dstType == OperandRegister8 && srcType == OperandRegister8 {
-			return []byte{byte(64 | (dstVal << 3) | srcVal)}
-		}
 
-		if dstType == OperandValueIndirect && instruction.Operands[1] == "HL" {
-			return []byte{OpCodes_AsmXZQP(0, 2, 0, 2), byte(dstVal & 0xFF), byte(dstVal >> 8)}
-		}
 		if dstType == OperandValueIndirect && instruction.Operands[1] == "A" {
-			return []byte{OpCodes_AsmXZQP(0, 2, 0, 3), byte(dstVal & 0xFF), byte(dstVal >> 8)}
+			return []byte{0xEA, byte(dstVal & 0xFF), byte(dstVal >> 8)}
 		}
 
-		if instruction.Operands[0] == "HL" && srcType == OperandValueIndirect {
-			return []byte{OpCodes_AsmXZQP(0, 2, 1, 2), byte(srcVal & 0xFF), byte(srcVal >> 8)}
-		}
 		if instruction.Operands[0] == "A" && srcType == OperandValueIndirect {
-			return []byte{OpCodes_AsmXZQP(0, 2, 1, 3), byte(srcVal & 0xFF), byte(srcVal >> 8)}
+			return []byte{0xFA, byte(srcVal & 0xFF), byte(srcVal >> 8)}
 		}
 
-		if instruction.Operands[0] == "(BC)" && instruction.Operands[1] == "A" { return []byte{OpCodes_AsmXZQP(0, 2, 0, 0)} }
-		if instruction.Operands[0] == "(DE)" && instruction.Operands[1] == "A" { return []byte{OpCodes_AsmXZQP(0, 2, 0, 1)} }
-		if instruction.Operands[0] == "A" && instruction.Operands[1] == "(BC)" { return []byte{OpCodes_AsmXZQP(0, 2, 1, 0)} }
-		if instruction.Operands[0] == "A" && instruction.Operands[1] == "(DE)" { return []byte{OpCodes_AsmXZQP(0, 2, 1, 1)} }
+		if instruction.Operands[0] == "[BC]" && instruction.Operands[1] == "A" { return []byte{OpCodes_AsmXZQP(0, 2, 0, 0)} }
+		if instruction.Operands[0] == "[DE]" && instruction.Operands[1] == "A" { return []byte{OpCodes_AsmXZQP(0, 2, 0, 1)} }
+		if instruction.Operands[0] == "A" && instruction.Operands[1] == "[BC]" { return []byte{OpCodes_AsmXZQP(0, 2, 1, 0)} }
+		if instruction.Operands[0] == "A" && instruction.Operands[1] == "[DE]" { return []byte{OpCodes_AsmXZQP(0, 2, 1, 1)} }
 
 		log.Fatalf("Invalid operands '%s' and '%s' for LD instruction at %s:%d", instruction.Operands[0], instruction.Operands[1], fileBase, lineNumber)
-		
+	
+	case "LDH":
+		dstType := OpCodes_GetOperandType(instruction, 0, false)
+		srcType := OpCodes_GetOperandType(instruction, 1, false)
+		srcVal := 0
+		dstVal := 0
+
+		if instruction.Operands[0] == "A" && srcType == OperandValueIndirect {
+			srcVal, err = strconv.Atoi(strings.Replace(strings.Replace(instruction.Operands[1], "[", "", -1), "]", "", -1))
+			if err != nil { panic(err) }
+
+			if instruction.Operands[0] != "A" {
+				log.Fatalf("LDH can only load into register A at %s:%d", instruction.Mnemonic, fileBase, lineNumber)
+			}
+			if srcVal >= 0xFF00 {
+				srcVal = srcVal - 0xFF00
+			}
+			OpCodes_EnsureNumberIsByte(srcVal, fileBase, lineNumber)
+			return []byte{0xF0, byte(srcVal & 0xFF)}
+		} else if dstType == OperandValueIndirect && instruction.Operands[1] == "A" {
+			dstVal, err = strconv.Atoi(strings.Replace(strings.Replace(instruction.Operands[0], "[", "", -1), "]", "", -1))
+			if err != nil { panic(err) }
+
+			if instruction.Operands[1] != "A" {
+				log.Fatalf("LDH can only load from register A at %s:%d", instruction.Mnemonic, fileBase, lineNumber)
+			}
+			if dstVal >= 0xFF00 {
+				dstVal = dstVal - 0xFF00
+			}
+			OpCodes_EnsureNumberIsByte(dstVal, fileBase, lineNumber)
+			return []byte{0xE0, byte(dstVal & 0xFF)}
+		} else {
+			log.Fatalf("Invalid operands '%s' and '%s' for LDH instruction at %s:%d", instruction.Operands[0], instruction.Operands[1], fileBase, lineNumber)
+		}
+
+	case "LDI":
+		if instruction.Operands[0] == "A" && instruction.Operands[1] == "[HL]" {
+			return []byte{0x2A}
+		} else if instruction.Operands[0] == "[HL]" && instruction.Operands[1] == "A" {
+			return []byte{0x22}
+		} else {
+			log.Fatalf("Invalid operands '%s' and '%s' for LDI instruction at %s:%d", instruction.Operands[0], instruction.Operands[1], fileBase, lineNumber)
+		}
+
 	case "NOP":
 		return []byte{0x00}
+
+	case "POP":
+		fallthrough
+	case "PUSH":
+		tableIndex, ok := OpCodes_Table_RP2[instruction.Operands[0]]
+		if !ok {
+			log.Fatalf("Invalid operand '%s' for %s instruction at %s:%d", instruction.Operands[0], instruction.Mnemonic, fileBase, lineNumber)
+		}
+		zVal := 1
+		if instruction.Mnemonic == "PUSH" {
+			zVal = 5
+		}
+		return []byte{OpCodes_AsmXZQP(3, zVal, 0, tableIndex)}
 
 	case "RET":
 		if len(instruction.Operands) == 0 {

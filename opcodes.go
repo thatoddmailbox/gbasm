@@ -46,6 +46,9 @@ var OpCodes_Table = map[string]OpCodeInfo{
 	"JP": OpCodeInfo{[]int{1, 2}},
 	"DEC": OpCodeInfo{[]int{1}},
 	"INC": OpCodeInfo{[]int{1}},
+	"DI": OpCodeInfo{[]int{0}},
+	"EI": OpCodeInfo{[]int{0}},
+	"HALT": OpCodeInfo{[]int{0}},
 	"LD": OpCodeInfo{[]int{2}},
 	"LDH": OpCodeInfo{[]int{2}},
 	"LDI": OpCodeInfo{[]int{2}},
@@ -53,6 +56,7 @@ var OpCodes_Table = map[string]OpCodeInfo{
 	"POP": OpCodeInfo{[]int{1}},
 	"PUSH": OpCodeInfo{[]int{1}},
 	"RET": OpCodeInfo{[]int{0, 1}},
+	"RETI": OpCodeInfo{[]int{0}},
 }
 
 var OpCodes_Table_R = map[string]int {
@@ -131,8 +135,16 @@ func OpCodes_GetOperandAsRegister8(instruction Instruction, i int, canBeIndirect
 	foundType := OpCodes_GetOperandType(instruction, i, false)
 	if foundType != OperandRegister8 {
 		if !canBeIndirectHL || instruction.Operands[i] != "[HL]" {
-			log.Fatalf("Expected register, got '%s' at %s:%d", instruction.Operands[i], fileBase, lineNumber)
+			log.Fatalf("Expected 8-bit register, got '%s' at %s:%d", instruction.Operands[i], fileBase, lineNumber)
 		}
+	}
+	return instruction.Operands[i]
+}
+
+func OpCodes_GetOperandAsRegister16(instruction Instruction, i int, fileBase string, lineNumber int) string {
+	foundType := OpCodes_GetOperandType(instruction, i, false)
+	if foundType != OperandRegister16 {
+		log.Fatalf("Expected 16-bit register, got '%s' at %s:%d", instruction.Operands[i], fileBase, lineNumber)
 	}
 	return instruction.Operands[i]
 }
@@ -207,8 +219,16 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 	case "CP":
 		if len(instruction.Operands) == 2 {
 			if instruction.Operands[0] != "A" {
-				log.Fatalf("Invalid operand '%s' for %s at %s:%d", instruction.Operands[0], instruction.Mnemonic, fileBase, lineNumber)
+				if instruction.Mnemonic != "ADD" || instruction.Operands[0] != "HL" {
+					log.Fatalf("Invalid operand '%s' for %s at %s:%d", instruction.Operands[0], instruction.Mnemonic, fileBase, lineNumber)
+				}
 			}
+		}
+
+		if instruction.Mnemonic == "ADD" && instruction.Operands[0] == "HL" {
+			// yay special case
+			srcVal := OpCodes_GetOperandAsRegister16(instruction, 1, fileBase, lineNumber)
+			return []byte{OpCodes_AsmXZQP(0, 1, 1, OpCodes_Table_RP[srcVal])}
 		}
 
 		targetIndex := len(instruction.Operands) - 1
@@ -303,6 +323,15 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		} else {
 			log.Fatalf("Invalid operand '%s' for %s at %s:%d", instruction.Operands[0], instruction.Mnemonic, fileBase, lineNumber)
 		}
+
+	case "DI":
+		return []byte{0xF3}
+
+	case "EI":
+		return []byte{0xFB}
+
+	case "HALT":
+		return []byte{0x76}
 
 	case "LD":
 		dstType := OpCodes_GetOperandType(instruction, 0, false)
@@ -432,6 +461,9 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 			}
 			return []byte{OpCodes_AsmXZY(3, 0, OpCodes_Table_CC[instruction.Operands[0]])}
 		}
+
+	case "RETI":
+		return []byte{0xD9}
 	}
 	return []byte{}
 }

@@ -37,7 +37,7 @@ func ROM_Create(basePath string) {
 	nameArray := []byte(CurrentROM.Info.Name)
 	copy(CurrentROM.Output[0x134:], nameArray) // left over bytes will be null
 
-	CurrentROM.Output[0x143] = 0x00 // CGB bit
+	CurrentROM.Output[0x143] = 0xc0 // CGB bit
 
 	// licensee code
 	CurrentROM.Output[0x144] = 0x30 // "0"

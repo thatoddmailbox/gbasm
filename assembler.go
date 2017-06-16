@@ -56,6 +56,15 @@ func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
 		if len(line) == 0 { continue }
+		if line[0] == '.'{
+			// is it an include?
+			if strings.HasPrefix(line, ".incasm") {
+				// if so, get those labels
+				instructionParts := strings.Split(line, " ")
+				includedFilePath := path.Join(path.Dir(filePath), strings.Replace(instructionParts[1], "\"", "", -1))
+				Assembler_FindLabelsInFile(includedFilePath, path.Base(includedFilePath))
+			}
+		}
 		if line[len(line) - 1] == ':' {
 			// it's a label
 			labelName := line[:len(line)-1]

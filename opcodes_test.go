@@ -41,9 +41,18 @@ func TestControlInstructions(t *testing.T) {
 	TryTestInput(t, Instruction{"RETI", []string{}}, []byte{0xD9})
 }
 
-func TestCompareInstructions(t *testing.T) {
+func TestBitInstructions(t *testing.T) {
 	TryTestInput(t, Instruction{"BIT", []string{"1", "A"}}, []byte{0xCB, 0x4F})
 	TryTestInput(t, Instruction{"BIT", []string{"2", "B"}}, []byte{0xCB, 0x50})
+	TryTestInput(t, Instruction{"BIT", []string{"3", "[HL]"}}, []byte{0xCB, 0x5E})
+
+	TryTestInput(t, Instruction{"RES", []string{"1", "A"}}, []byte{0xCB, 0x8F})
+	TryTestInput(t, Instruction{"RES", []string{"2", "B"}}, []byte{0xCB, 0x90})
+	TryTestInput(t, Instruction{"RES", []string{"3", "[HL]"}}, []byte{0xCB, 0x9E})
+
+	TryTestInput(t, Instruction{"SET", []string{"1", "A"}}, []byte{0xCB, 0xCF})
+	TryTestInput(t, Instruction{"SET", []string{"2", "B"}}, []byte{0xCB, 0xD0})
+	TryTestInput(t, Instruction{"SET", []string{"3", "[HL]"}}, []byte{0xCB, 0xDE})
 }
 
 func TestLoadInstructions(t *testing.T) {
@@ -157,6 +166,7 @@ func TestMiscInstructions(t *testing.T) {
 	TryTestInput(t, Instruction{"DB", []string{"66"}}, []byte{0x42})
 	TryTestInput(t, Instruction{"DB", []string{"66", "66"}}, []byte{0x42, 0x42})
 	TryTestInput(t, Instruction{"DB", []string{"66", "66", "66"}}, []byte{0x42, 0x42, 0x42})
+	TryTestInput(t, Instruction{"DW", []string{"1234"}}, []byte{0xD2, 0x04})
 
 	TryTestInput(t, Instruction{"DI", []string{}}, []byte{0xF3})
 	TryTestInput(t, Instruction{"EI", []string{}}, []byte{0xFB})

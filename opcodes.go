@@ -22,6 +22,7 @@ type OpCodeInfo struct {
 
 var OpCodes_Table = map[string]OpCodeInfo{
 	"DB": OpCodeInfo{[]int{-1}},
+	"DW": OpCodeInfo{[]int{-1}},
 
 	"ADD": OpCodeInfo{[]int{2}},
 	"ADC": OpCodeInfo{[]int{2}},
@@ -42,6 +43,8 @@ var OpCodes_Table = map[string]OpCodeInfo{
 	"SRL": OpCodeInfo{[]int{1}},
 
 	"BIT": OpCodeInfo{[]int{2}},
+	"RES": OpCodeInfo{[]int{2}},
+	"SET": OpCodeInfo{[]int{2}},
 	"CALL": OpCodeInfo{[]int{1, 2}},
 	"JP": OpCodeInfo{[]int{1, 2}},
 	"DEC": OpCodeInfo{[]int{1}},
@@ -201,6 +204,16 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		}
 		return output
 
+	case "DW":
+		// ok i guess technically this to isn't really an instruction but still too bad
+		output := []byte{}
+		for i := 0; i < len(instruction.Operands); i++ {
+			num := OpCodes_GetOperandAsNumber(instruction, i, fileBase, lineNumber)
+			output = append(output, byte(num & 0xFF))
+			output = append(output, byte(num >> 8))
+		}
+		return output
+
 
 	case "ADD":
 		fallthrough
@@ -265,9 +278,19 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		return []byte{0xCB, OpCodes_AsmXZY(0, targetVal, yVal)}
 
 	case "BIT":
+		fallthrough
+	case "RES":
+		fallthrough
+	case "SET":
+		xVal := 1
+		if instruction.Mnemonic == "RES" {
+			xVal = 2
+		} else if instruction.Mnemonic == "SET" {
+			xVal = 3
+		}
 		target := OpCodes_GetOperandAsNumber(instruction, 0, fileBase, lineNumber)
 		register := OpCodes_GetOperandAsRegister8(instruction, 1, true, fileBase, lineNumber)
-		return []byte{0xCB, OpCodes_AsmXZY(1, OpCodes_Table_R[register], target)}
+		return []byte{0xCB, OpCodes_AsmXZY(xVal, OpCodes_Table_R[register], target)}
 
 	case "CALL":
 		fallthrough

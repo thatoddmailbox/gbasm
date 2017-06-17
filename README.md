@@ -24,6 +24,7 @@ Name = "COOL GAME"
 * the expression parser likes to assume parentheses and do weird things. for example, `2 - 3 + 4` gets interpreted as `2 - (3 + 4)`, which is probably not what you want
 * no MBCs are supported, and rom sizes are assumed to be 32 KiB
 * all numbers are assumed to be unsigned -- putting in `-1` will give you an error
+* you can cause weird unhelpful errors to occur with the dot instructions if you mess with their expected parameters
 
 ## Assembler instructions
 things that aren't actual LR35902 instructions but that do useful things
@@ -35,5 +36,11 @@ things that aren't actual LR35902 instructions but that do useful things
   defines `<something>` as equal to `<value>`. useful for registers and things like that
 * `.org <address>`
   sets the origin from that point on to the given address
-* `.incasm "<file>.s"
+* `.incasm "<file>.s"`
   includes everything from that assembly file
+
+## Things that are different from other assemblers
+* the checksums are automatically calculated, you don't need some other program to fix them for you
+* the `0b` prefix can be used to make a binary number (for example, `0b10101010` == `170`)
+* the `0x` prefix can be used to make a hexadecimal number (for example, `0x2A` == `42`)
+* the `%` and `$` for binary and hexadecimal numbers are not currently supported because I'm lazy

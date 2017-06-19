@@ -128,7 +128,9 @@ func TestMathInstructions(t *testing.T) {
 	TryTestInput(t, Instruction{"INC", []string{"[HL]"}}, []byte{0x34})
 }
 
-func TestROTInsstructions(t *testing.T) {
+func TestROTInstructions(t *testing.T) {
+	TryTestInput(t, Instruction{"CPL", []string{}}, []byte{0x2F})
+
 	TryTestInput(t, Instruction{"RLC", []string{"A"}}, []byte{0xCB, 0x07})
 	TryTestInput(t, Instruction{"RLC", []string{"B"}}, []byte{0xCB, 0x00})
 	TryTestInput(t, Instruction{"RLC", []string{"[HL]"}}, []byte{0xCB, 0x06})

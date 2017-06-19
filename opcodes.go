@@ -46,6 +46,7 @@ var OpCodes_Table = map[string]OpCodeInfo{
 	"RES": OpCodeInfo{[]int{2}},
 	"SET": OpCodeInfo{[]int{2}},
 	"CALL": OpCodeInfo{[]int{1, 2}},
+	"CPL": OpCodeInfo{[]int{0}},
 	"JP": OpCodeInfo{[]int{1, 2}},
 	"DEC": OpCodeInfo{[]int{1}},
 	"INC": OpCodeInfo{[]int{1}},
@@ -323,6 +324,9 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 			}
 			return []byte{OpCodes_AsmXZY(3, z, OpCodes_Table_CC[instruction.Operands[0]]), byte(target & 0xFF), byte(target >> 8)}
 		}
+
+	case "CPL":
+		return []byte{0x2F}
 
 	case "DEC":
 		fallthrough

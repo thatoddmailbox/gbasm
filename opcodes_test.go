@@ -170,6 +170,9 @@ func TestMiscInstructions(t *testing.T) {
 	TryTestInput(t, Instruction{"DB", []string{"66", "66", "66"}}, []byte{0x42, 0x42, 0x42})
 	TryTestInput(t, Instruction{"DW", []string{"1234"}}, []byte{0xD2, 0x04})
 
+	TryTestInput(t, Instruction{"ASCII", []string{"\"hello\""}}, []byte{0x68, 0x65, 0x6C, 0x6C, 0x6F})
+	TryTestInput(t, Instruction{"ASCIZ", []string{"\"hello\""}}, []byte{0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x00})
+
 	TryTestInput(t, Instruction{"DI", []string{}}, []byte{0xF3})
 	TryTestInput(t, Instruction{"EI", []string{}}, []byte{0xFB})
 	TryTestInput(t, Instruction{"HALT", []string{}}, []byte{0x76})

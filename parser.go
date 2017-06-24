@@ -110,6 +110,11 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		return expression
 	}
 
+	if expression[0] == '"' && expression[len(expression) - 1] == '"' {
+		// it's a string
+		return expression
+	}
+
 	isIndirectAccess := false
 	if expression[0] == '[' && expression[len(expression) - 1] == ']' {
 		// remove the brackets for now, add them back at the end

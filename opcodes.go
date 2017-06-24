@@ -12,6 +12,7 @@ const (
 	OperandConditionCode = iota
 	OperandRegister8 = iota
 	OperandRegister16 = iota
+	OperandString = iota
 	OperandValueIndirect = iota
 	OperandValue = iota
 )
@@ -21,6 +22,8 @@ type OpCodeInfo struct {
 }
 
 var OpCodes_Table = map[string]OpCodeInfo{
+	"ASCII": OpCodeInfo{[]int{1}},
+	"ASCIZ": OpCodeInfo{[]int{1}},
 	"DB": OpCodeInfo{[]int{-1}},
 	"DW": OpCodeInfo{[]int{-1}},
 
@@ -153,6 +156,14 @@ func OpCodes_GetOperandAsRegister16(instruction Instruction, i int, fileBase str
 	return instruction.Operands[i]
 }
 
+func OpCodes_GetOperandAsString(instruction Instruction, i int, fileBase string, lineNumber int) string {
+	foundType := OpCodes_GetOperandType(instruction, i, false)
+	if foundType != OperandString {
+		log.Fatalf("Expected string, got '%s' at %s:%d", instruction.Operands[i], fileBase, lineNumber)
+	}
+	return instruction.Operands[i][1:len(instruction.Operands[i]) - 1]
+}
+
 func OpCodes_GetOperandType(instruction Instruction, i int, canBeConditionCode bool) OperandType {
 	operand := instruction.Operands[i]
 	if canBeConditionCode && Utils_StringInSlice(operand, Parser_ConditionCodes) {
@@ -161,6 +172,8 @@ func OpCodes_GetOperandType(instruction Instruction, i int, canBeConditionCode b
 		return OperandRegister8
 	} else if Utils_StringInSlice(operand, Parser_16BitRegisterNames) {
 		return OperandRegister16
+	} else if operand[0] == '"' && operand[len(operand) - 1] == '"' {
+		return OperandString
 	} else {
 		if strings.Contains(operand, "[") {
 			return OperandValueIndirect
@@ -197,6 +210,16 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 	var err error
 
 	switch instruction.Mnemonic {
+	case "ASCII":
+		fallthrough
+	case "ASCIZ":
+		str := OpCodes_GetOperandAsString(instruction, 0, fileBase, lineNumber)
+		output := []byte(str)
+		if instruction.Mnemonic == "ASCIZ" {
+			output = append(output, 0x00);
+		}
+		return output
+
 	case "DB":
 		// ok i guess technically it's not really an instruction but too bad
 		output := []byte{}

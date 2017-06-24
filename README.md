@@ -28,6 +28,10 @@ Name = "COOL GAME"
 
 ## Assembler instructions
 things that aren't actual LR35902 instructions but that do useful things
+* `ascii "<string>"`
+  inserts that string, encoded using ASCII, into the output
+* `asciz "<string>"`
+  same as `ascii` but terminates the string with a null byte
 * `db <byte>`
   inserts that byte into the output
 * `dw <word>`

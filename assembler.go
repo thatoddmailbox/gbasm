@@ -153,11 +153,12 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 				buf := ""
 				instruction := Instruction{}
 				foundAnInstruction := false
+				inAString := false
 
 				for i := 0; i < len(line); i++ {
 					char := line[i]
-					if (char == '/' && (len(line) - i) > 1) || char == ';' || char == '#' {
-						if char == ';' || char == '#' || line[i + 1] == '/' {
+					if (char == '/' && (len(line) - i) > 1) || char == ';' {
+						if char == ';' || line[i + 1] == '/' {
 							// single-line comment
 							break
 						} else if line[i + 1] == '*' {
@@ -172,7 +173,10 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 						instruction.Mnemonic = strings.ToUpper(buf)
 						foundAnInstruction = true
 						buf = ""
-					}  else if char == ',' && foundAnInstruction {
+					} else if char == '"' {
+						inAString = !inAString
+						buf += string(char)
+					} else if char == ',' && foundAnInstruction && !inAString {
 						// yay we have an operand
 						instruction.Operands = append(instruction.Operands, buf)
 						foundAnInstruction = true

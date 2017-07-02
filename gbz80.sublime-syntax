@@ -16,7 +16,7 @@ contexts:
       scope: keyword.other
     - match: \b(?i:(RLC|RRC|RL|RR|SLA|SRA|SWAP|SRL))\b
       scope: keyword.other
-    - match: \b(?i:(ASCII|ASCIZ|DB|DW|CP|BIT|RES|SET|CALL|JP|CPL|DEC|DI|EI|HALT|INC|LD|LDH|LDI|NOP|POP|PUSH|RET|RETI))\b
+    - match: \b(?i:(ASCII|ASCIZ|DB|DW|CP|BIT|RES|SET|CALL|JP|CPL|DEC|DI|EI|HALT|INC|LD|LDH|LDI|LDD|NOP|POP|PUSH|RET|RETI))\b
       scope: keyword.other
     - match: (?i)(%[01]+\b)|(0b[01]+\b)|(\b[01]+b\b)|((#|\$)[0-9a-f]+\b)|(\b([0-9]+|0x[0-9a-f]+|[0-9][0-9a-f]*h)\b)
       scope: constant.numeric.asm

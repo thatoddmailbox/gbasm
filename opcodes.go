@@ -59,6 +59,7 @@ var OpCodes_Table = map[string]OpCodeInfo{
 	"LD": OpCodeInfo{[]int{2}},
 	"LDH": OpCodeInfo{[]int{2}},
 	"LDI": OpCodeInfo{[]int{2}},
+	"LDD": OpCodeInfo{[]int{2}},
 	"NOP": OpCodeInfo{[]int{0}},
 	"POP": OpCodeInfo{[]int{1}},
 	"PUSH": OpCodeInfo{[]int{1}},
@@ -477,12 +478,22 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		}
 
 	case "LDI":
+		fallthrough
+	case "LDD":
 		if instruction.Operands[0] == "A" && instruction.Operands[1] == "[HL]" {
-			return []byte{0x2A}
+			if instruction.Mnemonic == "LDI" {
+				return []byte{0x2A}
+			} else {
+				return []byte{0x3A}
+			}
 		} else if instruction.Operands[0] == "[HL]" && instruction.Operands[1] == "A" {
-			return []byte{0x22}
+			if instruction.Mnemonic == "LDI" {
+				return []byte{0x22}
+			} else {
+				return []byte{0x32}
+			}
 		} else {
-			log.Fatalf("Invalid operands '%s' and '%s' for LDI instruction at %s:%d", instruction.Operands[0], instruction.Operands[1], fileBase, lineNumber)
+			log.Fatalf("Invalid operands '%s' and '%s' for %s instruction at %s:%d", instruction.Operands[0], instruction.Operands[1], instruction.Mnemonic, fileBase, lineNumber)
 		}
 
 	case "NOP":

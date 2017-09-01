@@ -78,6 +78,8 @@ func TestLoadInstructions(t *testing.T) {
 	TryTestInput(t, Instruction{"LDH", []string{"[65320]", "A"}}, []byte{0xE0, 0x28})
 	TryTestInput(t, Instruction{"LDI", []string{"[HL]", "A"}}, []byte{0x22})
 	TryTestInput(t, Instruction{"LDI", []string{"A", "[HL]"}}, []byte{0x2A})
+	TryTestInput(t, Instruction{"LDD", []string{"[HL]", "A"}}, []byte{0x32})
+	TryTestInput(t, Instruction{"LDD", []string{"A", "[HL]"}}, []byte{0x3A})
 }
 
 func TestALUInstructions(t *testing.T) {

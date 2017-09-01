@@ -157,7 +157,7 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 
 				for i := 0; i < len(line); i++ {
 					char := line[i]
-					if (char == '/' && (len(line) - i) > 1) || char == ';' {
+					if (!inAString && ((char == '/' && (len(line) - i) > 1) || char == ';')) {
 						if char == ';' || line[i + 1] == '/' {
 							// single-line comment
 							break

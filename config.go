@@ -11,6 +11,7 @@ import (
 
 type ROMInfo struct {
 	Name string
+	SupportsDMG bool
 }
 
 func ReadConfigFile(basePath string) {

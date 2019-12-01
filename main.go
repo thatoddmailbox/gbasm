@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"path"
@@ -13,6 +14,10 @@ import (
 
 func main() {
 	log.Println("gbasm")
+
+	outputFileName := flag.String("output", "out.gb", "The path and name of the output file.")
+
+	flag.Parse()
 
 	workingDirectory, err := os.Getwd()
 	if err != nil {
@@ -30,8 +35,7 @@ func main() {
 	rom.Finalize()
 
 	// output the actual file
-	outputFileName := path.Join(workingDirectory, "out.gb")
-	outputFile, err := os.OpenFile(outputFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	outputFile, err := os.OpenFile(*outputFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		panic(err)
 	}

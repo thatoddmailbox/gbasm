@@ -14,6 +14,7 @@ type Info struct {
 type ROM struct {
 	Info                 Info
 	Output               [32 * utils.KiB]byte
+	UsedByteCount        int
 	Definitions          map[string]int
 	UnpointedDefinitions []string
 }

@@ -227,5 +227,6 @@ func Assembler_AssembleInstruction(instruction Instruction, outputIndex int, fil
 		rom.Current.Output[outputIndex] = output[i]
 		outputIndex++
 	}
+	rom.Current.UsedByteCount += len(output)
 	return outputIndex
 }

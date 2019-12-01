@@ -56,4 +56,7 @@ func main() {
 		value := rom.Current.Definitions[name]
 		log.Println(" *", name, value, "0x"+strconv.FormatInt(int64(value), 16))
 	}
+
+	log.Println()
+	log.Printf("Usage: %d out of %d bytes", rom.Current.UsedByteCount, len(rom.Current.Output))
 }

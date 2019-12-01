@@ -4,6 +4,8 @@ import (
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/thatoddmailbox/gbasm/utils"
 )
 
 type OperandType int
@@ -167,11 +169,11 @@ func OpCodes_GetOperandAsString(instruction Instruction, i int, fileBase string,
 
 func OpCodes_GetOperandType(instruction Instruction, i int, canBeConditionCode bool) OperandType {
 	operand := instruction.Operands[i]
-	if canBeConditionCode && Utils_StringInSlice(operand, Parser_ConditionCodes) {
+	if canBeConditionCode && utils.StringInSlice(operand, Parser_ConditionCodes) {
 		return OperandConditionCode
-	} else if Utils_StringInSlice(operand, Parser_8BitRegisterNames) || operand == "(HL)" {
+	} else if utils.StringInSlice(operand, Parser_8BitRegisterNames) || operand == "(HL)" {
 		return OperandRegister8
-	} else if Utils_StringInSlice(operand, Parser_16BitRegisterNames) {
+	} else if utils.StringInSlice(operand, Parser_16BitRegisterNames) {
 		return OperandRegister16
 	} else if operand[0] == '"' && operand[len(operand) - 1] == '"' {
 		return OperandString
@@ -204,7 +206,7 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 		log.Fatalf("Unknown instruction '%s' at %s:%d", instruction.Mnemonic, fileBase, lineNumber)
 	}
 
-	if info.ValidOperandCounts[0] != -1 && !Utils_IntInSlice(len(instruction.Operands), info.ValidOperandCounts) {
+	if info.ValidOperandCounts[0] != -1 && !utils.IntInSlice(len(instruction.Operands), info.ValidOperandCounts) {
 		log.Fatalf("Incorrect number of operands for instruction '%s' (got %d) at %s:%d", instruction.Mnemonic, len(instruction.Operands), fileBase, lineNumber)
 	}
 

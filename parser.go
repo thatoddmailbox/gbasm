@@ -4,6 +4,8 @@ import (
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/thatoddmailbox/gbasm/utils"
 )
 
 var Parser_8BitRegisterNames = []string{
@@ -106,7 +108,7 @@ func Parser_IsSecondOperatorMoreImportantThanFirst(first string, second string) 
 func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase string, lineNumber int) string {
 	expression = strings.TrimSpace(expression)
 
-	if Utils_StringInSlice(strings.ToUpper(expression), append(append(Parser_8BitRegisterNames, Parser_16BitRegisterNames...), Parser_ConditionCodes...)) {
+	if utils.StringInSlice(strings.ToUpper(expression), append(append(Parser_8BitRegisterNames, Parser_16BitRegisterNames...), Parser_ConditionCodes...)) {
 		return expression
 	}
 
@@ -135,7 +137,7 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		definedVal, isDefinition := CurrentROM.Definitions[token]
 		if pass == 0 {
 			// it's the first pass, so check if there's something that's in need of pointing
-			if !isDefinition && Utils_StringInSlice(token, CurrentROM.UnpointedDefinitions) {
+			if !isDefinition && utils.StringInSlice(token, CurrentROM.UnpointedDefinitions) {
 				// there is! use 0 as padding just so we can calculate where stuff is correctly
 				// the actual value will be filled in on the second pass
 				definedVal = 0

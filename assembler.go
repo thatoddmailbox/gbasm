@@ -7,6 +7,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/thatoddmailbox/gbasm/utils"
 )
 
 type Instruction struct {
@@ -70,7 +72,7 @@ func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 			labelName := line[:len(line)-1]
 
 			_, existsInDefs := CurrentROM.Definitions[labelName]
-			existsInUnpointedDefs := Utils_StringInSlice(labelName, CurrentROM.UnpointedDefinitions)
+			existsInUnpointedDefs := utils.StringInSlice(labelName, CurrentROM.UnpointedDefinitions)
 			if existsInDefs || existsInUnpointedDefs { log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", labelName, fileBase, lineNumber) }
 
 			CurrentROM.UnpointedDefinitions = append(CurrentROM.UnpointedDefinitions, labelName)
@@ -201,7 +203,7 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 					for i := 0; i < len(instruction.Operands); i++ {
 						instruction.Operands[i] = Parser_SimplifyPotentialExpression(instruction.Operands[i], pass, fileBase, lineNumber)
 
-						if Utils_StringInSlice(strings.ToUpper(instruction.Operands[i]), append(append(Parser_8BitRegisterNames, Parser_16BitRegisterNames...), Parser_ConditionCodes...)) {
+						if utils.StringInSlice(strings.ToUpper(instruction.Operands[i]), append(append(Parser_8BitRegisterNames, Parser_16BitRegisterNames...), Parser_ConditionCodes...)) {
 							// capitalize register and condition code names
 							instruction.Operands[i] = strings.ToUpper(instruction.Operands[i])
 						}

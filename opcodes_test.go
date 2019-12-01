@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/thatoddmailbox/gbasm/utils"
 )
 
 func DisplayInstruction(instruction Instruction) string {
@@ -24,7 +26,7 @@ func PrettyOutputArray(output []byte) string {
 
 func TryTestInput(t *testing.T, instruction Instruction, expectedOutput []byte) {
 	output := OpCodes_GetOutput(instruction, "test", 0)
-	if !Utils_ByteSlicesEqual(output, expectedOutput) {
+	if !utils.ByteSlicesEqual(output, expectedOutput) {
 		t.Errorf("Instruction '%s' assembled to %s, should have been %s", DisplayInstruction(instruction), PrettyOutputArray(output), PrettyOutputArray(expectedOutput))
 	}
 }

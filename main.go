@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 
 	"github.com/thatoddmailbox/gbasm/rom"
@@ -41,7 +42,18 @@ func main() {
 	}
 
 	log.Println("Constant listing:")
-	for name, val := range rom.Current.Definitions {
-		log.Println("*", name, val, "0x"+strconv.FormatInt(int64(val), 16))
+
+	definitionKeys := make([]string, len(rom.Current.Definitions))
+	i := 0
+	for name, _ := range rom.Current.Definitions {
+		definitionKeys[i] = name
+		i += 1
+	}
+
+	sort.Strings(definitionKeys)
+
+	for _, name := range definitionKeys {
+		value := rom.Current.Definitions[name]
+		log.Println(" *", name, value, "0x"+strconv.FormatInt(int64(value), 16))
 	}
 }

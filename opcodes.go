@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/thatoddmailbox/gbasm/parser"
 	"github.com/thatoddmailbox/gbasm/utils"
 )
 
@@ -128,7 +129,7 @@ var OpCodes_Table_ROT = map[string]int{
 }
 
 func OpCodes_GetOperandAsNumber(instruction Instruction, i int, fileBase string, lineNumber int) int {
-	num, ok := Assembler_ParseNumber(instruction.Operands[i])
+	num, ok := parser.ParseNumber(instruction.Operands[i])
 	if !ok {
 		log.Fatalf("Expected number, got '%s' at %s:%d", instruction.Operands[i], fileBase, lineNumber)
 	}
@@ -169,11 +170,11 @@ func OpCodes_GetOperandAsString(instruction Instruction, i int, fileBase string,
 
 func OpCodes_GetOperandType(instruction Instruction, i int, canBeConditionCode bool) OperandType {
 	operand := instruction.Operands[i]
-	if canBeConditionCode && utils.StringInSlice(operand, Parser_ConditionCodes) {
+	if canBeConditionCode && utils.StringInSlice(operand, parser.ConditionCodes) {
 		return OperandConditionCode
-	} else if utils.StringInSlice(operand, Parser_8BitRegisterNames) || operand == "(HL)" {
+	} else if utils.StringInSlice(operand, parser.RegisterNames8) || operand == "(HL)" {
 		return OperandRegister8
-	} else if utils.StringInSlice(operand, Parser_16BitRegisterNames) {
+	} else if utils.StringInSlice(operand, parser.RegisterNames16) {
 		return OperandRegister16
 	} else if operand[0] == '"' && operand[len(operand)-1] == '"' {
 		return OperandString

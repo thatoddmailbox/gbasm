@@ -5,36 +5,16 @@ import (
 	"log"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 
+	"github.com/thatoddmailbox/gbasm/parser"
+	"github.com/thatoddmailbox/gbasm/rom"
 	"github.com/thatoddmailbox/gbasm/utils"
 )
 
 type Instruction struct {
 	Mnemonic string
 	Operands []string
-}
-
-func Assembler_ParseNumber(numString string) (int, bool) {
-	numString = strings.TrimSpace(numString)
-	if strings.HasPrefix(numString, "0b") {
-		// it's a binary number
-		num, err := strconv.ParseInt(numString[2:], 2, 0)
-		if err != nil {
-			return 0, false
-		}
-		return int(num), true
-	}
-	if len(numString) == 3 && numString[0] == '\'' && numString[2] == '\'' {
-		// it's a character
-		return int(numString[1]), true
-	}
-	num, err := strconv.ParseInt(numString, 0, 0)
-	if err != nil {
-		return 0, false
-	}
-	return int(num), true
 }
 
 func Assembler_ParseFile(filePath string, origin int, maxLength int) int {
@@ -75,13 +55,13 @@ func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 			// it's a label
 			labelName := line[:len(line)-1]
 
-			_, existsInDefs := CurrentROM.Definitions[labelName]
-			existsInUnpointedDefs := utils.StringInSlice(labelName, CurrentROM.UnpointedDefinitions)
+			_, existsInDefs := rom.Current.Definitions[labelName]
+			existsInUnpointedDefs := utils.StringInSlice(labelName, rom.Current.UnpointedDefinitions)
 			if existsInDefs || existsInUnpointedDefs {
 				log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", labelName, fileBase, lineNumber)
 			}
 
-			CurrentROM.UnpointedDefinitions = append(CurrentROM.UnpointedDefinitions, labelName)
+			rom.Current.UnpointedDefinitions = append(rom.Current.UnpointedDefinitions, labelName)
 		}
 	}
 }
@@ -123,20 +103,20 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 				}
 				key := instructionParts[1]
 
-				val, valid := Assembler_ParseNumber(Parser_SimplifyPotentialExpression(instructionParts[2], pass, fileBase, lineNumber))
+				val, valid := parser.ParseNumber(parser.SimplifyPotentialExpression(instructionParts[2], pass, fileBase, lineNumber))
 				if !valid {
 					log.Fatalf("Expected number, got '%s' at %s:%d", instructionParts[2], fileBase, lineNumber)
 				}
 
-				_, exists := CurrentROM.Definitions[key]
+				_, exists := rom.Current.Definitions[key]
 				if exists {
 					log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", key, fileBase, lineNumber)
 				}
 
-				CurrentROM.Definitions[key] = val
+				rom.Current.Definitions[key] = val
 
 			case "org":
-				newOrigin, valid := Assembler_ParseNumber(instructionParts[1])
+				newOrigin, valid := parser.ParseNumber(instructionParts[1])
 				if !valid {
 					log.Fatalf("Expected number, got '%s' at %s:%d", instructionParts[1], fileBase, lineNumber)
 				}
@@ -162,12 +142,12 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 
 				labelName := line[:len(line)-1]
 
-				_, exists := CurrentROM.Definitions[labelName]
+				_, exists := rom.Current.Definitions[labelName]
 				if exists {
 					log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", labelName, fileBase, lineNumber)
 				}
 
-				CurrentROM.Definitions[labelName] = outputIndex
+				rom.Current.Definitions[labelName] = outputIndex
 			} else {
 				// parse it character-by-character
 				buf := ""
@@ -219,9 +199,9 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 
 					// process the operands and any expressions in them
 					for i := 0; i < len(instruction.Operands); i++ {
-						instruction.Operands[i] = Parser_SimplifyPotentialExpression(instruction.Operands[i], pass, fileBase, lineNumber)
+						instruction.Operands[i] = parser.SimplifyPotentialExpression(instruction.Operands[i], pass, fileBase, lineNumber)
 
-						if utils.StringInSlice(strings.ToUpper(instruction.Operands[i]), append(append(Parser_8BitRegisterNames, Parser_16BitRegisterNames...), Parser_ConditionCodes...)) {
+						if utils.StringInSlice(strings.ToUpper(instruction.Operands[i]), append(append(parser.RegisterNames8, parser.RegisterNames16...), parser.ConditionCodes...)) {
 							// capitalize register and condition code names
 							instruction.Operands[i] = strings.ToUpper(instruction.Operands[i])
 						}
@@ -244,7 +224,7 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 func Assembler_AssembleInstruction(instruction Instruction, outputIndex int, fileBase string, lineNumber int) int {
 	output := OpCodes_GetOutput(instruction, fileBase, lineNumber)
 	for i := 0; i < len(output); i++ {
-		CurrentROM.Output[outputIndex] = output[i]
+		rom.Current.Output[outputIndex] = output[i]
 		outputIndex++
 	}
 	return outputIndex

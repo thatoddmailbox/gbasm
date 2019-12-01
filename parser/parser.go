@@ -1,14 +1,15 @@
-package main
+package parser
 
 import (
 	"log"
 	"strconv"
 	"strings"
 
+	"github.com/thatoddmailbox/gbasm/rom"
 	"github.com/thatoddmailbox/gbasm/utils"
 )
 
-var Parser_8BitRegisterNames = []string{
+var RegisterNames8 = []string{
 	"A",
 	"B",
 	"C",
@@ -19,7 +20,7 @@ var Parser_8BitRegisterNames = []string{
 	"L",
 }
 
-var Parser_16BitRegisterNames = []string{
+var RegisterNames16 = []string{
 	"AF",
 	"BC",
 	"[BC]",
@@ -31,7 +32,7 @@ var Parser_16BitRegisterNames = []string{
 	"SP",
 }
 
-var Parser_ConditionCodes = []string{
+var ConditionCodes = []string{
 	"Z",
 	"NZ",
 	"NC",
@@ -42,7 +43,7 @@ var Parser_ConditionCodes = []string{
 	"M",
 }
 
-var Parser_Tokens = map[string]int{
+var Tokens = map[string]int{
 	"*":  6,
 	"/":  6,
 	"+":  5,
@@ -54,7 +55,29 @@ var Parser_Tokens = map[string]int{
 	"|":  1,
 }
 
-func Parser_ParseExpressionTokens(expression string) []string {
+// ParseNumber parses the given string as a numeric constant.
+func ParseNumber(numString string) (int, bool) {
+	numString = strings.TrimSpace(numString)
+	if strings.HasPrefix(numString, "0b") {
+		// it's a binary number
+		num, err := strconv.ParseInt(numString[2:], 2, 0)
+		if err != nil {
+			return 0, false
+		}
+		return int(num), true
+	}
+	if len(numString) == 3 && numString[0] == '\'' && numString[2] == '\'' {
+		// it's a character
+		return int(numString[1]), true
+	}
+	num, err := strconv.ParseInt(numString, 0, 0)
+	if err != nil {
+		return 0, false
+	}
+	return int(num), true
+}
+
+func ParseExpressionTokens(expression string) []string {
 	tokens := []string{}
 	buf := ""
 	inAString := false
@@ -104,14 +127,14 @@ func Parser_ParseExpressionTokens(expression string) []string {
 	return tokens
 }
 
-func Parser_IsSecondOperatorMoreImportantThanFirst(first string, second string) bool {
-	return Parser_Tokens[second] > Parser_Tokens[first]
+func IsSecondOperatorMoreImportantThanFirst(first string, second string) bool {
+	return Tokens[second] > Tokens[first]
 }
 
-func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase string, lineNumber int) string {
+func SimplifyPotentialExpression(expression string, pass int, fileBase string, lineNumber int) string {
 	expression = strings.TrimSpace(expression)
 
-	if utils.StringInSlice(strings.ToUpper(expression), append(append(Parser_8BitRegisterNames, Parser_16BitRegisterNames...), Parser_ConditionCodes...)) {
+	if utils.StringInSlice(strings.ToUpper(expression), append(append(RegisterNames8, RegisterNames16...), ConditionCodes...)) {
 		return expression
 	}
 
@@ -127,7 +150,7 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		expression = expression[1 : len(expression)-1]
 	}
 
-	tokens := Parser_ParseExpressionTokens(expression)
+	tokens := ParseExpressionTokens(expression)
 
 	// https://en.wikipedia.org/wiki/Shunting-yard_algorithm
 
@@ -136,11 +159,11 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 	poppedToken := ""
 
 	for _, token := range tokens {
-		num, ok := Assembler_ParseNumber(token)
-		definedVal, isDefinition := CurrentROM.Definitions[token]
+		num, ok := ParseNumber(token)
+		definedVal, isDefinition := rom.Current.Definitions[token]
 		if pass == 0 {
 			// it's the first pass, so check if there's something that's in need of pointing
-			if !isDefinition && utils.StringInSlice(token, CurrentROM.UnpointedDefinitions) {
+			if !isDefinition && utils.StringInSlice(token, rom.Current.UnpointedDefinitions) {
 				// there is! use 0 as padding just so we can calculate where stuff is correctly
 				// the actual value will be filled in on the second pass
 				definedVal = 0
@@ -167,7 +190,7 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 			operatorStack = operatorStack[:len(operatorStack)-1]
 		} else {
 			// is there an operator with a greater precedence at the top?
-			for len(operatorStack) > 0 && Parser_IsSecondOperatorMoreImportantThanFirst(token, operatorStack[len(operatorStack)-1]) {
+			for len(operatorStack) > 0 && IsSecondOperatorMoreImportantThanFirst(token, operatorStack[len(operatorStack)-1]) {
 				poppedToken, operatorStack = operatorStack[len(operatorStack)-1], operatorStack[:len(operatorStack)-1]
 				outputStack = append(outputStack, poppedToken)
 			}

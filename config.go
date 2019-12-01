@@ -7,12 +7,9 @@ import (
 	"path"
 
 	"github.com/BurntSushi/toml"
-)
 
-type ROMInfo struct {
-	Name string
-	SupportsDMG bool
-}
+	"github.com/thatoddmailbox/gbasm/rom"
+)
 
 func ReadConfigFile(basePath string) {
 	filePath := path.Join(basePath, "info.toml")
@@ -26,7 +23,7 @@ func ReadConfigFile(basePath string) {
 		panic(err)
 	}
 
-	if _, err := toml.Decode(string(fileContents), &CurrentROM.Info); err != nil {
+	if _, err := toml.Decode(string(fileContents), &rom.Current.Info); err != nil {
 		panic(err)
 	}
 }

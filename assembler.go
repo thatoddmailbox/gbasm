@@ -49,7 +49,9 @@ func Assembler_ParseFile(filePath string, origin int, maxLength int) int {
 
 func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 	file, err := os.Open(filePath)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
@@ -57,8 +59,10 @@ func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 	for scanner.Scan() {
 		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 { continue }
-		if line[0] == '.'{
+		if len(line) == 0 {
+			continue
+		}
+		if line[0] == '.' {
 			// is it an include?
 			if strings.HasPrefix(line, ".incasm") {
 				// if so, get those labels
@@ -67,13 +71,15 @@ func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 				Assembler_FindLabelsInFile(includedFilePath, path.Base(includedFilePath))
 			}
 		}
-		if line[len(line) - 1] == ':' {
+		if line[len(line)-1] == ':' {
 			// it's a label
 			labelName := line[:len(line)-1]
 
 			_, existsInDefs := CurrentROM.Definitions[labelName]
 			existsInUnpointedDefs := utils.StringInSlice(labelName, CurrentROM.UnpointedDefinitions)
-			if existsInDefs || existsInUnpointedDefs { log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", labelName, fileBase, lineNumber) }
+			if existsInDefs || existsInUnpointedDefs {
+				log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", labelName, fileBase, lineNumber)
+			}
 
 			CurrentROM.UnpointedDefinitions = append(CurrentROM.UnpointedDefinitions, labelName)
 		}
@@ -82,7 +88,9 @@ func Assembler_FindLabelsInFile(filePath string, fileBase string) {
 
 func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLength int, pass int) int {
 	file, err := os.Open(filePath)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	defer file.Close()
 
 	outputIndex := origin
@@ -93,7 +101,9 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 	for scanner.Scan() {
 		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 { continue }
+		if len(line) == 0 {
+			continue
+		}
 
 		if inMultilineComment {
 			if len(line) > 1 && line[len(line)-2] == '*' && line[len(line)-1] == '/' {
@@ -114,16 +124,22 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 				key := instructionParts[1]
 
 				val, valid := Assembler_ParseNumber(Parser_SimplifyPotentialExpression(instructionParts[2], pass, fileBase, lineNumber))
-				if !valid { log.Fatalf("Expected number, got '%s' at %s:%d", instructionParts[2], fileBase, lineNumber) }
+				if !valid {
+					log.Fatalf("Expected number, got '%s' at %s:%d", instructionParts[2], fileBase, lineNumber)
+				}
 
 				_, exists := CurrentROM.Definitions[key]
-				if exists { log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", key, fileBase, lineNumber) }
+				if exists {
+					log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", key, fileBase, lineNumber)
+				}
 
 				CurrentROM.Definitions[key] = val
 
 			case "org":
 				newOrigin, valid := Assembler_ParseNumber(instructionParts[1])
-				if !valid { log.Fatalf("Expected number, got '%s' at %s:%d", instructionParts[1], fileBase, lineNumber) }
+				if !valid {
+					log.Fatalf("Expected number, got '%s' at %s:%d", instructionParts[1], fileBase, lineNumber)
+				}
 				outputIndex = newOrigin
 
 			case "incasm":
@@ -135,9 +151,9 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 			}
 		} else {
 			// it's either a comment, label, or instruction
-			
+
 			// is it a label?
-			if line[len(line) - 1] == ':' {
+			if line[len(line)-1] == ':' {
 				// it is
 				if pass != 0 {
 					// labels only apply on the first pass
@@ -147,7 +163,9 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 				labelName := line[:len(line)-1]
 
 				_, exists := CurrentROM.Definitions[labelName]
-				if exists { log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", labelName, fileBase, lineNumber) }
+				if exists {
+					log.Fatalf("Tried to declare already existing label or constant '%s' at %s:%d", labelName, fileBase, lineNumber)
+				}
 
 				CurrentROM.Definitions[labelName] = outputIndex
 			} else {
@@ -159,16 +177,16 @@ func Assembler_ParseFilePass(filePath string, fileBase string, origin int, maxLe
 
 				for i := 0; i < len(line); i++ {
 					char := line[i]
-					if (!inAString && ((char == '/' && (len(line) - i) > 1) || char == ';')) {
-						if char == ';' || line[i + 1] == '/' {
+					if !inAString && ((char == '/' && (len(line)-i) > 1) || char == ';') {
+						if char == ';' || line[i+1] == '/' {
 							// single-line comment
 							break
-						} else if line[i + 1] == '*' {
+						} else if line[i+1] == '*' {
 							// start of multi-line comment
 							inMultilineComment = true
 							break
 						} else {
-							log.Fatalf("Unexpected '%s' after '/' at %s:%d", string(line[i + 1]), fileBase, lineNumber)
+							log.Fatalf("Unexpected '%s' after '/' at %s:%d", string(line[i+1]), fileBase, lineNumber)
 						}
 					} else if char == ' ' && instruction.Mnemonic == "" {
 						// yay we have a mnemonic

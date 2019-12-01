@@ -43,15 +43,15 @@ var Parser_ConditionCodes = []string{
 }
 
 var Parser_Tokens = map[string]int{
-	"*": 6,
-	"/": 6,
-	"+": 5,
-	"-": 5,
+	"*":  6,
+	"/":  6,
+	"+":  5,
+	"-":  5,
 	">>": 4,
 	"<<": 4,
-	"&": 3,
-	"^": 2,
-	"|": 1,
+	"&":  3,
+	"^":  2,
+	"|":  1,
 }
 
 func Parser_ParseExpressionTokens(expression string) []string {
@@ -61,25 +61,26 @@ func Parser_ParseExpressionTokens(expression string) []string {
 
 	for i := 0; i < len(expression); i++ {
 		char := expression[i]
-		if (char == '"' || char == '\'') {
+		if char == '"' || char == '\'' {
 			buf = buf + string(char)
 			inAString = !inAString
 		} else if inAString {
 			buf = buf + string(char)
-		} else if (
-			(char == '(' || char == ')') ||
+		} else if (char == '(' || char == ')') ||
 			(char == '+' || char == '-' || char == '*' || char == '/') ||
 			(char == '&' || char == '|' || char == '^') ||
-			(char == '>' || char == '<')) {
-			if buf != "" { tokens = append(tokens, buf) }
+			(char == '>' || char == '<') {
+			if buf != "" {
+				tokens = append(tokens, buf)
+			}
 			buf = ""
 
-			if (char == '>' || char == '<') {
+			if char == '>' || char == '<' {
 				// is it a bitshift operator?
 				// if so, is the next character the same?
-				if (i + 1 < len(expression) && char == expression[i + 1]) {
+				if i+1 < len(expression) && char == expression[i+1] {
 					// then add the token and ignore the next character
-					tokens = append(tokens, string(char) + string(char))
+					tokens = append(tokens, string(char)+string(char))
 					i++
 					continue
 				}
@@ -87,7 +88,9 @@ func Parser_ParseExpressionTokens(expression string) []string {
 
 			tokens = append(tokens, string(char))
 		} else if char == ' ' {
-			if buf != "" { tokens = append(tokens, buf) }
+			if buf != "" {
+				tokens = append(tokens, buf)
+			}
 			buf = ""
 		} else {
 			buf = buf + string(char)
@@ -112,16 +115,16 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		return expression
 	}
 
-	if expression[0] == '"' && expression[len(expression) - 1] == '"' {
+	if expression[0] == '"' && expression[len(expression)-1] == '"' {
 		// it's a string
 		return expression
 	}
 
 	isIndirectAccess := false
-	if expression[0] == '[' && expression[len(expression) - 1] == ']' {
+	if expression[0] == '[' && expression[len(expression)-1] == ']' {
 		// remove the brackets for now, add them back at the end
 		isIndirectAccess = true
-		expression = expression[1:len(expression) - 1]
+		expression = expression[1 : len(expression)-1]
 	}
 
 	tokens := Parser_ParseExpressionTokens(expression)
@@ -153,9 +156,9 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		} else if token == "(" {
 			operatorStack = append(operatorStack, token)
 		} else if token == ")" {
-			for operatorStack[len(operatorStack) - 1] != "(" {
+			for operatorStack[len(operatorStack)-1] != "(" {
 				poppedToken, operatorStack = operatorStack[len(operatorStack)-1], operatorStack[:len(operatorStack)-1]
-				outputStack = append(outputStack, poppedToken) 
+				outputStack = append(outputStack, poppedToken)
 			}
 			if len(operatorStack) == 0 {
 				log.Fatalf("Extra ')' at %s:%d", fileBase, lineNumber)
@@ -166,7 +169,7 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 			// is there an operator with a greater precedence at the top?
 			for len(operatorStack) > 0 && Parser_IsSecondOperatorMoreImportantThanFirst(token, operatorStack[len(operatorStack)-1]) {
 				poppedToken, operatorStack = operatorStack[len(operatorStack)-1], operatorStack[:len(operatorStack)-1]
-				outputStack = append(outputStack, poppedToken) 
+				outputStack = append(outputStack, poppedToken)
 			}
 			operatorStack = append(operatorStack, token)
 		}
@@ -176,7 +179,7 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 		if poppedToken == "(" || poppedToken == ")" {
 			log.Fatalf("Extra '%s' at %s:%d", poppedToken, fileBase, lineNumber)
 		}
-		outputStack = append(outputStack, poppedToken) 
+		outputStack = append(outputStack, poppedToken)
 	}
 
 	rpnStack := []int{}
@@ -187,28 +190,30 @@ func Parser_SimplifyPotentialExpression(expression string, pass int, fileBase st
 			rpnStack = append(rpnStack, val)
 		} else {
 			// it's an operand that requires 2 parameters
-			if len(rpnStack) < 2 { log.Fatalf("Error parsing expression '%s' at %s:%d", expression, fileBase, lineNumber) }
+			if len(rpnStack) < 2 {
+				log.Fatalf("Error parsing expression '%s' at %s:%d", expression, fileBase, lineNumber)
+			}
 			first, second := 0, 0
 			second, rpnStack = rpnStack[len(rpnStack)-1], rpnStack[:len(rpnStack)-1]
 			first, rpnStack = rpnStack[len(rpnStack)-1], rpnStack[:len(rpnStack)-1]
 			if token == "+" {
-				rpnStack = append(rpnStack, first + second)
+				rpnStack = append(rpnStack, first+second)
 			} else if token == "-" {
-				rpnStack = append(rpnStack, first - second)
+				rpnStack = append(rpnStack, first-second)
 			} else if token == "*" {
-				rpnStack = append(rpnStack, first * second)
+				rpnStack = append(rpnStack, first*second)
 			} else if token == "/" {
-				rpnStack = append(rpnStack, first / second)
+				rpnStack = append(rpnStack, first/second)
 			} else if token == ">>" {
-				rpnStack = append(rpnStack, int(uint(first) >> uint(second)))
+				rpnStack = append(rpnStack, int(uint(first)>>uint(second)))
 			} else if token == "<<" {
-				rpnStack = append(rpnStack, int(uint(first) << uint(second)))
+				rpnStack = append(rpnStack, int(uint(first)<<uint(second)))
 			} else if token == "|" {
-				rpnStack = append(rpnStack, first | second)
+				rpnStack = append(rpnStack, first|second)
 			} else if token == "&" {
-				rpnStack = append(rpnStack, first & second)
+				rpnStack = append(rpnStack, first&second)
 			} else if token == "^" {
-				rpnStack = append(rpnStack, first & second)
+				rpnStack = append(rpnStack, first&second)
 			} else {
 				log.Fatalf("Unknown token '%s' when parsing expression '%s' at %s:%d", token, expression, fileBase, lineNumber)
 			}

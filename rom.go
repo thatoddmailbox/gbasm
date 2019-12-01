@@ -7,9 +7,9 @@ import (
 )
 
 type ROM struct {
-	Info ROMInfo
-	Output [32*KiB]byte
-	Definitions map[string]int
+	Info                 ROMInfo
+	Output               [32 * KiB]byte
+	Definitions          map[string]int
 	UnpointedDefinitions []string
 }
 
@@ -63,14 +63,18 @@ func ROM_Create(basePath string) {
 	// calculate global checksum
 	globalChecksum := ROM_CalculateGlobalChecksum(CurrentROM.Output[:])
 	CurrentROM.Output[0x14E] = byte((globalChecksum & 0xFF00) >> 8) // upper bits
-	CurrentROM.Output[0x14F] = byte(globalChecksum & 0xFF) // lower bits
+	CurrentROM.Output[0x14F] = byte(globalChecksum & 0xFF)          // lower bits
 
 	// output the actual file
 	outputFile, err := os.OpenFile(outputFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	defer outputFile.Close()
 	_, err = outputFile.Write(CurrentROM.Output[:])
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 }
 
 func ROM_ValidateParameters() {
@@ -79,7 +83,7 @@ func ROM_ValidateParameters() {
 	}
 }
 
-func ROM_CalculateHeaderChecksum(array []byte) (byte) {
+func ROM_CalculateHeaderChecksum(array []byte) byte {
 	result := byte(0)
 	for _, n := range array {
 		result = result - n - 1
@@ -87,7 +91,7 @@ func ROM_CalculateHeaderChecksum(array []byte) (byte) {
 	return result
 }
 
-func ROM_CalculateGlobalChecksum(array []byte) (int) {
+func ROM_CalculateGlobalChecksum(array []byte) int {
 	result := 0
 	for _, n := range array {
 		result = result + int(n)

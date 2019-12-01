@@ -24,6 +24,6 @@ func main() {
 
 	log.Println("Constant listing:")
 	for name, val := range CurrentROM.Definitions {
-		log.Println("*", name, val, "0x" + strconv.FormatInt(int64(val), 16))
+		log.Println("*", name, val, "0x"+strconv.FormatInt(int64(val), 16))
 	}
 }

@@ -454,7 +454,7 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 			if err != nil { panic(err) }
 
 			if instruction.Operands[0] != "A" {
-				log.Fatalf("LDH can only load into register A at %s:%d", instruction.Mnemonic, fileBase, lineNumber)
+				log.Fatalf("LDH can only load into register A at %s:%d", fileBase, lineNumber)
 			}
 			if srcVal >= 0xFF00 {
 				srcVal = srcVal - 0xFF00
@@ -466,7 +466,7 @@ func OpCodes_GetOutput(instruction Instruction, fileBase string, lineNumber int)
 			if err != nil { panic(err) }
 
 			if instruction.Operands[1] != "A" {
-				log.Fatalf("LDH can only load from register A at %s:%d", instruction.Mnemonic, fileBase, lineNumber)
+				log.Fatalf("LDH can only load from register A at %s:%d", fileBase, lineNumber)
 			}
 			if dstVal >= 0xFF00 {
 				dstVal = dstVal - 0xFF00
